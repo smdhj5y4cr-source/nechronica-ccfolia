@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ネクロニカ → ココフォリア変換</title>
+<style>
+body{margin:0;padding:16px;background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+main{max-width:900px;margin:auto}
+h1{font-size:22px;text-align:center;color:#e2b8b8}
+.card{background:#1b1b1b;border:1px solid #444;border-radius:12px;padding:14px;margin:14px 0}
+.status{padding:10px 12px;border-radius:8px;background:#302020;margin:12px 0;font-size:14px}
+textarea{width:100%;box-sizing:border-box;min-height:300px;background:#0d0d0d;color:#eee;border:1px solid #555;border-radius:8px;padding:12px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+#output{min-height:220px}
+.buttons{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+button{appearance:none;border:0;border-radius:999px;padding:12px 18px;background:#7d1111;color:white;font-weight:700;font-size:15px}
+button.secondary{background:#444}
+.small{font-size:12px;color:#aaa;line-height:1.6}
+noscript{display:block;background:#7d1111;color:#fff;padding:12px;border-radius:8px;margin:12px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Nechronica → CCFOLIA</h1>
+<noscript>JavaScriptが無効です。この画面では変換できません。JavaScriptを実行できるブラウザで開いてください。</noscript>
+<div id="jsStatus" class="status">JavaScriptの起動を確認中……</div>
+
+<div class="card">
+  <strong>キャラクターシート</strong>
+  <p class="small">キャラクター保管所の「テキスト出力」を全文貼り付けてください。</p>
+  <textarea id="input" placeholder="ここにキャラクターシートを貼り付け"></textarea>
+  <div class="buttons">
+    <button id="convertBtn" type="button">変換する</button>
+    <button id="sampleBtn" type="button" class="secondary">テストデータを入れる</button>
+  </div>
+</div>
+
+<div class="card">
+  <strong>出力JSON</strong>
+  <p id="message" class="small"></p>
+  <textarea id="output" readonly></textarea>
+  <div class="buttons">
+    <button id="copyBtn" type="button">JSONをコピー</button>
+  </div>
+</div>
+</main>
+
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const statusEl = $('jsStatus');
+window.addEventListener('error', function(e){
+  statusEl.textContent = 'JavaScriptエラー: ' + (e.message || '不明なエラー');
+});
+statusEl.textContent = 'JavaScript：動作しています。下の「変換する」を押せます。';
+
+function normalizeText(s){
+  return String(s || '').replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ').replace(/[\u200B-\u200D\uFEFF]/g,'');
+}
+function esc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+function getField(text, labels){
+  for(const label of labels){
+    const e=esc(label);
+    let m=text.match(new RegExp('(?:^|\\n)\\s*'+e+'\\s*[：:]\\s*([^\\n]*)','m'));
+    if(m && m[1].trim()) return m[1].trim();
+  }
+  return '';
+}
+function numberFrom(v){
+  const z=String(v||'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));
+  const m=z.match(/-?\d+/); return m?Number(m[0]):0;
+}
+function getActionValue(text){
+  let m=text.match(/(?:^|\n)\s*最大行動値\s*[：:]\s*([0-9０-９]+)/m);
+  if(!m) m=text.match(/(?:^|\n)\s*行動値\s*[：:]\s*([0-9０-９]+)/m);
+  return m?numberFrom(m[1]):0;
+}
+function parseManeuvers(text){
+  const items=[];
+  for(const raw of text.split('\n')){
+    const line=raw.trim();
+    if(!line.startsWith('[')) continue;
+    const m=line.match(/^\[([^\]]*)\]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*)$/);
+    if(!m) continue;
+    const part=m[1].trim(), name=m[2].trim();
+    if(!name || part==='部位' || /マニューバ名/.test(name)) continue;
+    items.push({part,name,timing:m[3].trim(),cost:m[4].trim(),range:m[5].trim(),effect:m[6].trim()});
+  }
+  return items;
+}
+function parseRegrets(text){
+  const out=[], seen=new Set();
+  for(const raw of text.split('\n')){
+    const line=raw.trim();
+    if(!line.includes('への')) continue;
+    const m=line.match(/^(.+?)\s+への\s+.*?([■□]{2,})/);
+    if(!m) continue;
+    let label=m[1].trim();
+    if(!label || label.length>50 || /^への$/.test(label)) continue;
+    if(seen.has(label)) continue;
+    seen.add(label);
+    out.push({label,value:(m[2].match(/■/g)||[]).length,max:m[2].length});
+  }
+  return out;
+}
+function convert(){
+  try{
+    const text=normalizeText($('input').value);
+    if(!text.trim()){
+      $('message').textContent='キャラクターシートを貼り付けてください。';
+      $('output').value=''; return;
+    }
+    const name=getField(text,['キャラクター名','ドール名','名前']);
+    const age=getField(text,['享年']);
+    const position=getField(text,['ポジション']);
+    const cls=getField(text,['クラス']);
+    const placement=getField(text,['初期配置']);
+    const initiative=getActionValue(text);
+    const maneuvers=parseManeuvers(text);
+    const regrets=parseRegrets(text);
+
+    const memo=[];
+    if(name) memo.push('キャラクター名：'+name);
+    if(age) memo.push('享年：'+age);
+    if(position) memo.push('ポジション：'+position);
+    if(cls) memo.push('クラス：'+cls);
+    if(placement) memo.push('初期配置：'+placement);
+    if(initiative) memo.push('行動値：'+initiative);
+
+    const counts={頭:0,腕:0,胴:0,脚:0};
+    const commands=['nm 【未練決定】','1nc 【対話判定】','1nc 【狂気判定】','1nc 【行動判定】'];
+    for(const x of maneuvers){
+      const p=x.part==='足'?'脚':x.part;
+      if(Object.prototype.hasOwnProperty.call(counts,p)) counts[p]++;
+      const where=x.part ? x.part+' / ' : '';
+      commands.push(('1na 【'+x.name+'】 '+where+(x.timing||'-')+' / '+(x.cost||'-')+' / '+(x.range||'-')+' '+(x.effect||'')).trim());
+    }
+    const partStatus=['頭','腕','胴','脚'].map(p=>({label:p,value:counts[p],max:counts[p]}));
+    const json={kind:'character',data:{name:name||'名称未取得',memo:memo.join('\n'),initiative:initiative,externalUrl:'',status:partStatus.concat(regrets),params:[],color:'#888888',commands:commands.join('\n')}};
+    $('output').value=JSON.stringify(json,null,2);
+    const misses=[];
+    if(!name) misses.push('キャラクター名');
+    if(!initiative) misses.push('行動値');
+    if(!maneuvers.length) misses.push('マニューバ');
+    $('message').textContent=misses.length ? '変換は実行されましたが、'+misses.join('・')+'を読み取れませんでした。' : '変換成功：'+name+' / 行動値 '+initiative+' / マニューバ '+maneuvers.length+'件 / 未練 '+regrets.length+'件';
+  }catch(err){
+    $('message').textContent='変換中にエラーが発生しました：'+err.message;
+  }
+}
+async function copyOutput(){
+  const text=$('output').value;
+  if(!text){$('message').textContent='先に変換してください。';return;}
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+    }else{
+      $('output').focus(); $('output').select();
+      if(!document.execCommand('copy')) throw new Error('ブラウザがコピーを許可しませんでした');
+      window.getSelection && window.getSelection().removeAllRanges();
+    }
+    $('message').textContent='JSONをコピーしました。';
+  }catch(err){
+    $('output').focus(); $('output').select();
+    $('message').textContent='自動コピーできません。出力欄を選択したので、手動でコピーしてください。';
+  }
+}
+const sample=`キャラクター名：ナグモ\n享年：8歳\nポジション：アリス\nクラス：　タナトス / バロック\n初期配置：煉獄\n行動値：13\n\n[未練]　　　　　　 内容　　　 狂気度　　発狂時\n〈狼のぬいぐるみ〉 への 保護　■■■□　常時密着\nヒイラギ　　　　　 への 恋心　■■■□　自傷行動\n\n■マニューバ■\n[部位]　　　　　マニューバ名　: タイミング : コスト : 射程: 効果\n[頭]　　　　　 のうみそ　　　 : オート　　 :　　　　:　　 : 2\n[頭]　　　　　 あご　　　　　 : アクション : 2　　　: 0　 : 肉弾攻撃１\n[脚]　　　　　 仕込みブーツ　 : アクション : 2　　　: 0　 : 白兵攻撃2、出目+1`;
+$('convertBtn').addEventListener('click',convert);
+$('copyBtn').addEventListener('click',copyOutput);
+$('sampleBtn').addEventListener('click',function(){$('input').value=sample;convert();});
+})();
+</script>
+</body>
+</html>

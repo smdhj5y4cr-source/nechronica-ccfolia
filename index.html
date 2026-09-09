@@ -1,345 +1,178 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ネクロニカ 手駒管理ツール</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ネクロニカ → ココフォリア変換</title>
 <style>
-  :root {
-    --bg:#0d0d0f;
-    --panel:#17171b;
-    --panel2:#202027;
-    --line:#34343e;
-    --text:#f0ecec;
-    --muted:#aaa3a3;
-    --accent:#a51d24;
-    --accent2:#6d1015;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
-    background:linear-gradient(180deg,#09090b 0%,#131317 100%);
-    color:var(--text);
-  }
-  header{
-    position:sticky;top:0;z-index:10;
-    background:rgba(13,13,15,.96);
-    backdrop-filter:blur(8px);
-    border-bottom:1px solid var(--line);
-    padding:16px;
-  }
-  header h1{margin:0;font-size:22px;letter-spacing:.05em;color:#e6b5b7}
-  header p{margin:6px 0 0;color:var(--muted);font-size:13px}
-  main{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:16px}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.2)}
-  .panel h2{margin:0 0 14px;font-size:18px;color:#d99699}
-  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-  .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
-  input,textarea,select{
-    width:100%;border:1px solid var(--line);border-radius:10px;
-    background:#0f0f12;color:var(--text);padding:10px;font-size:15px;
-  }
-  textarea{min-height:90px;resize:vertical}
-  input:focus,textarea:focus,select:focus{outline:none;border-color:#8d3a3f;box-shadow:0 0 0 2px rgba(165,29,36,.14)}
-  button{
-    border:0;border-radius:999px;padding:10px 16px;font-weight:700;font-size:14px;
-    color:#fff;background:linear-gradient(180deg,var(--accent),var(--accent2));cursor:pointer;
-  }
-  button.secondary{background:#3a3a43}
-  button.good{background:#3f704d}
-  button.warn{background:#8b5d20}
-  button.danger{background:#7f2020}
-  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
-  .part-row,.maneuver-row{
-    display:grid;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);
-    border-radius:12px;background:#121216;margin-bottom:8px;
-  }
-  .part-row{grid-template-columns:.8fr 1.25fr 1fr 2fr auto}
-  .maneuver-row{grid-template-columns:1fr 1.2fr .8fr .55fr .55fr 2fr auto}
-  .part-row textarea,.maneuver-row textarea{min-height:42px;height:42px}
-  .saved-list{display:grid;gap:10px}
-  .saved-card{border:1px solid var(--line);border-radius:12px;padding:12px;background:#121216}
-  .saved-top{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
-  .saved-name{font-weight:800;font-size:17px}
-  .saved-meta{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.6}
-  .mini{font-size:12px;padding:7px 11px}
-  .notice{font-size:12px;color:var(--muted);line-height:1.7}
-  .status{margin-top:8px;min-height:20px;font-size:13px;color:#d7c0c0}
-  .empty{text-align:center;color:var(--muted);padding:20px 0}
-  .section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-  .subnote{font-size:12px;color:var(--muted);margin:-4px 0 12px;line-height:1.6}
-  @media(max-width:800px){
-    .grid,.grid-3{grid-template-columns:1fr}
-    .part-row,.maneuver-row{grid-template-columns:1fr 1fr}
-    .part-row .part-memo,.maneuver-row .effect{grid-column:1/-1}
-    .part-row .remove-wrap,.maneuver-row .remove-wrap{grid-column:1/-1}
-  }
+body{margin:0;padding:16px;background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+main{max-width:900px;margin:auto}
+h1{font-size:22px;text-align:center;color:#e2b8b8}
+.card{background:#1b1b1b;border:1px solid #444;border-radius:12px;padding:14px;margin:14px 0}
+.status{padding:10px 12px;border-radius:8px;background:#302020;margin:12px 0;font-size:14px}
+textarea{width:100%;box-sizing:border-box;min-height:300px;background:#0d0d0d;color:#eee;border:1px solid #555;border-radius:8px;padding:12px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+#output{min-height:220px}
+.buttons{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+button{appearance:none;border:0;border-radius:999px;padding:12px 18px;background:#7d1111;color:white;font-weight:700;font-size:15px}
+button.secondary{background:#444}
+.small{font-size:12px;color:#aaa;line-height:1.6}
+noscript{display:block;background:#7d1111;color:#fff;padding:12px;border-radius:8px;margin:12px 0}
+.nav{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:10px 0 16px}
+.nav a{display:inline-block;text-decoration:none;border-radius:999px;padding:10px 16px;background:#444;color:#fff;font-weight:700;font-size:14px}
 </style>
 </head>
 <body>
-<header>
-  <h1>Nechronica 手駒管理</h1>
-  <p>手駒・パーツ・マニューバを個別に作成して保存できる管理ツール</p>
-</header>
 <main>
-  <section class="panel">
-    <div class="section-title">
-      <h2>手駒データ</h2>
-      <button class="secondary mini" id="newBtn">新規作成</button>
-    </div>
-    <div class="grid">
-      <div><label>手駒名</label><input id="name" placeholder="例：ゾンビ犬" /></div>
-      <div><label>種別</label><input id="type" placeholder="例：レギオン / ホラー / サヴァント" /></div>
-    </div>
-    <div class="grid-3" style="margin-top:12px">
-      <div><label>悪意</label><input id="malice" type="number" inputmode="numeric" min="0" value="0" /></div>
-      <div><label>最大行動値</label><input id="initiative" type="number" inputmode="numeric" min="0" value="0" /></div>
-      <div><label>初期配置</label>
-        <select id="placement">
-          <option value="">未設定</option>
-          <option>奈落</option><option>地獄</option><option>煉獄</option><option>花園</option><option>楽園</option>
-        </select>
-      </div>
-    </div>
-    <div class="grid" style="margin-top:12px">
-      <div><label>耐久・補足</label><input id="hp" placeholder="例：レギオン数20 / 特殊耐久など" /></div>
-      <div><label>タグ・分類</label><input id="tags" placeholder="例：獣型, 近接, ボス" /></div>
-    </div>
-    <div style="margin-top:12px"><label>説明・メモ</label><textarea id="memo" placeholder="設定、見た目、運用メモなど"></textarea></div>
-  </section>
+<h1>Nechronica → CCFOLIA</h1>
+<div class="nav"><a href="token-manager.html">手駒作成・保存ツールを開く</a></div>
+<noscript>JavaScriptが無効です。この画面では変換できません。JavaScriptを実行できるブラウザで開いてください。</noscript>
+<div id="jsStatus" class="status">JavaScriptの起動を確認中……</div>
 
-  <section class="panel">
-    <div class="section-title">
-      <h2>パーツ</h2>
-      <button class="secondary mini" id="addPartBtn">＋ パーツ追加</button>
-    </div>
-    <p class="subnote">手駒が持つパーツを1個ずつ登録できます。部位がない手駒は「その他」で構いません。</p>
-    <div id="partList"></div>
-  </section>
+<div class="card">
+  <strong>キャラクターシート</strong>
+  <p class="small">キャラクター保管所の「テキスト出力」を全文貼り付けてください。</p>
+  <textarea id="input" placeholder="ここにキャラクターシートを貼り付け"></textarea>
+  <div class="buttons">
+    <button id="convertBtn" type="button">変換する</button>
+    <button id="sampleBtn" type="button" class="secondary">テストデータを入れる</button>
+  </div>
+</div>
 
-  <section class="panel">
-    <div class="section-title">
-      <h2>マニューバ</h2>
-      <button class="secondary mini" id="addManeuverBtn">＋ マニューバ追加</button>
-    </div>
-    <p class="subnote">「所属パーツ」には、このマニューバを持つパーツ名を記入できます。スキルなど特定パーツに属さないものは空欄でも構いません。</p>
-    <div id="maneuverList"></div>
-  </section>
-
-  <section class="panel">
-    <h2>保存・出力</h2>
-    <div class="toolbar">
-      <button id="saveBtn">この手駒を保存</button>
-      <button class="good" id="copyBtn">JSONをコピー</button>
-      <button class="secondary" id="downloadBtn">JSONファイル保存</button>
-      <button class="secondary" id="importBtn">JSON読み込み</button>
-      <button class="warn" id="ccfoliaBtn">ココフォリア用JSONをコピー</button>
-      <input id="fileInput" type="file" accept="application/json,.json" hidden />
-    </div>
-    <div class="status" id="status"></div>
-    <p class="notice">保存データはこのブラウザ内（localStorage）に保持されます。前の版で保存した手駒もそのまま読み込めます。Safariのサイトデータを削除すると消える場合があるため、大事な手駒はJSONファイル保存も併用してください。</p>
-  </section>
-
-  <section class="panel">
-    <div class="section-title"><h2>保存済み手駒</h2><button class="danger mini" id="clearAllBtn">全削除</button></div>
-    <div id="savedList" class="saved-list"></div>
-  </section>
+<div class="card">
+  <strong>出力JSON</strong>
+  <p id="message" class="small"></p>
+  <textarea id="output" readonly></textarea>
+  <div class="buttons">
+    <button id="copyBtn" type="button">JSONをコピー</button>
+  </div>
+</div>
 </main>
 
 <script>
-const $ = (id) => document.getElementById(id);
-// 既存版と同じキーを使い、以前の保存データを引き継ぐ
-const STORAGE_KEY = 'nechronica_token_manager_v1';
-let editingId = null;
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const statusEl = $('jsStatus');
+window.addEventListener('error', function(e){
+  statusEl.textContent = 'JavaScriptエラー: ' + (e.message || '不明なエラー');
+});
+statusEl.textContent = 'JavaScript：動作しています。下の「変換する」を押せます。';
 
-function uid(){ return 't_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
-function esc(s=''){return String(s).replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':'&quot;'}[c]));}
-function setStatus(msg){$('status').textContent=msg;}
-
-function addPart(data={}){
-  const row=document.createElement('div');
-  row.className='part-row';
-  const location=data.location||data.part||'';
-  row.innerHTML=`
-    <div><label>部位</label>
-      <select class="p-location">
-        <option value="">未設定</option>
-        <option value="頭" ${location==='頭'?'selected':''}>頭</option>
-        <option value="腕" ${location==='腕'?'selected':''}>腕</option>
-        <option value="胴" ${location==='胴'?'selected':''}>胴</option>
-        <option value="脚" ${location==='脚'?'selected':''}>脚</option>
-        <option value="その他" ${location==='その他'?'selected':''}>その他</option>
-      </select>
-    </div>
-    <div><label>パーツ名</label><input class="p-name" value="${esc(data.name||'')}" placeholder="例：のうみそ"></div>
-    <div><label>種別・分類</label><input class="p-type" value="${esc(data.type||'')}" placeholder="例：基本 / 武装 / 変異"></div>
-    <div class="part-memo"><label>効果・メモ</label><textarea class="p-memo" placeholder="最大行動値+2 など">${esc(data.memo||data.effect||'')}</textarea></div>
-    <div class="remove-wrap"><button class="danger mini remove">削除</button></div>`;
-  row.querySelector('.remove').addEventListener('click',()=>row.remove());
-  $('partList').appendChild(row);
+function normalizeText(s){
+  return String(s || '').replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ').replace(/[\u200B-\u200D\uFEFF]/g,'');
 }
-
-function addManeuver(data={}){
-  const row=document.createElement('div');
-  row.className='maneuver-row';
-  row.innerHTML=`
-    <div><label>所属パーツ</label><input class="m-part" value="${esc(data.part||data.sourcePart||'')}" placeholder="例：あご"></div>
-    <div><label>マニューバ名</label><input class="m-name" value="${esc(data.name||'')}" placeholder="例：かみつく"></div>
-    <div><label>タイミング</label><input class="m-timing" value="${esc(data.timing||'')}" placeholder="アクション"></div>
-    <div><label>コスト</label><input class="m-cost" value="${esc(data.cost||'')}" placeholder="2"></div>
-    <div><label>射程</label><input class="m-range" value="${esc(data.range||'')}" placeholder="0"></div>
-    <div class="effect"><label>効果</label><textarea class="m-effect" placeholder="肉弾攻撃1">${esc(data.effect||'')}</textarea></div>
-    <div class="remove-wrap"><button class="danger mini remove">削除</button></div>`;
-  row.querySelector('.remove').addEventListener('click',()=>row.remove());
-  $('maneuverList').appendChild(row);
+function esc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+function getField(text, labels){
+  for(const label of labels){
+    const e=esc(label);
+    let m=text.match(new RegExp('(?:^|\\n)\\s*'+e+'\\s*[：:]\\s*([^\\n]*)','m'));
+    if(m && m[1].trim()) return m[1].trim();
+  }
+  return '';
 }
-
-function readForm(){
-  const parts=[...document.querySelectorAll('.part-row')].map(r=>({
-    location:r.querySelector('.p-location').value,
-    name:r.querySelector('.p-name').value.trim(),
-    type:r.querySelector('.p-type').value.trim(),
-    memo:r.querySelector('.p-memo').value.trim()
-  })).filter(p=>Object.values(p).some(Boolean));
-
-  const maneuvers=[...document.querySelectorAll('.maneuver-row')].map(r=>({
-    part:r.querySelector('.m-part').value.trim(),
-    name:r.querySelector('.m-name').value.trim(),
-    timing:r.querySelector('.m-timing').value.trim(),
-    cost:r.querySelector('.m-cost').value.trim(),
-    range:r.querySelector('.m-range').value.trim(),
-    effect:r.querySelector('.m-effect').value.trim()
-  })).filter(m=>Object.values(m).some(Boolean));
-
-  return {
-    id: editingId || uid(),
-    name:$('name').value.trim(), type:$('type').value.trim(),
-    malice:Number($('malice').value)||0,
-    initiative:Number($('initiative').value)||0,
-    placement:$('placement').value,
-    hp:$('hp').value.trim(), tags:$('tags').value.trim(), memo:$('memo').value.trim(),
-    parts, maneuvers, updatedAt:new Date().toISOString()
-  };
+function numberFrom(v){
+  const z=String(v||'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));
+  const m=z.match(/-?\d+/); return m?Number(m[0]):0;
 }
-
-function writeForm(d){
-  editingId=d.id||null;
-  $('name').value=d.name||''; $('type').value=d.type||'';
-  $('malice').value=d.malice??0; $('initiative').value=d.initiative??0;
-  $('placement').value=d.placement||''; $('hp').value=d.hp||''; $('tags').value=d.tags||''; $('memo').value=d.memo||'';
-
-  $('partList').innerHTML='';
-  (d.parts||[]).forEach(addPart);
-  if(!(d.parts||[]).length) addPart();
-
-  $('maneuverList').innerHTML='';
-  (d.maneuvers||[]).forEach(addManeuver);
-  if(!(d.maneuvers||[]).length) addManeuver();
-
-  window.scrollTo({top:0,behavior:'smooth'});
+function getActionValue(text){
+  let m=text.match(/(?:^|\n)\s*最大行動値\s*[：:]\s*([0-9０-９]+)/m);
+  if(!m) m=text.match(/(?:^|\n)\s*行動値\s*[：:]\s*([0-9０-９]+)/m);
+  return m?numberFrom(m[1]):0;
 }
-
-function newForm(){
-  editingId=null;
-  ['name','type','hp','tags','memo'].forEach(id=>$(id).value='');
-  $('malice').value=0; $('initiative').value=0; $('placement').value='';
-  $('partList').innerHTML=''; addPart();
-  $('maneuverList').innerHTML=''; addManeuver();
-  setStatus('新規作成モードです。');
+function parseManeuvers(text){
+  const items=[];
+  for(const raw of text.split('\n')){
+    const line=raw.trim();
+    if(!line.startsWith('[')) continue;
+    const m=line.match(/^\[([^\]]*)\]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*)$/);
+    if(!m) continue;
+    const part=m[1].trim(), name=m[2].trim();
+    if(!name || part==='部位' || /マニューバ名/.test(name)) continue;
+    items.push({part,name,timing:m[3].trim(),cost:m[4].trim(),range:m[5].trim(),effect:m[6].trim()});
+  }
+  return items;
 }
-
-function loadAll(){
-  try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return []}
+function parseRegrets(text){
+  const out=[], seen=new Set();
+  for(const raw of text.split('\n')){
+    const line=raw.trim();
+    if(!line.includes('への')) continue;
+    const m=line.match(/^(.+?)\s+への\s+.*?([■□]{2,})/);
+    if(!m) continue;
+    let label=m[1].trim();
+    if(!label || label.length>50 || /^への$/.test(label)) continue;
+    if(seen.has(label)) continue;
+    seen.add(label);
+    out.push({label,value:(m[2].match(/■/g)||[]).length,max:m[2].length});
+  }
+  return out;
 }
-function saveAll(arr){localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));}
-function saveCurrent(){
-  const d=readForm();
-  if(!d.name){setStatus('手駒名を入力してください。');return;}
-  const all=loadAll();
-  const idx=all.findIndex(x=>x.id===d.id);
-  if(idx>=0) all[idx]=d; else all.unshift(d);
-  saveAll(all); editingId=d.id; renderSaved(); setStatus(`「${d.name}」を保存しました。`);
-}
+function convert(){
+  try{
+    const text=normalizeText($('input').value);
+    if(!text.trim()){
+      $('message').textContent='キャラクターシートを貼り付けてください。';
+      $('output').value=''; return;
+    }
+    const name=getField(text,['キャラクター名','ドール名','名前']);
+    const age=getField(text,['享年']);
+    const position=getField(text,['ポジション']);
+    const cls=getField(text,['クラス']);
+    const placement=getField(text,['初期配置']);
+    const initiative=getActionValue(text);
+    const maneuvers=parseManeuvers(text);
+    const regrets=parseRegrets(text);
 
-function renderSaved(){
-  const all=loadAll(); const root=$('savedList'); root.innerHTML='';
-  if(!all.length){root.innerHTML='<div class="empty">まだ保存された手駒はありません。</div>';return;}
-  all.forEach(d=>{
-    const card=document.createElement('div'); card.className='saved-card';
-    card.innerHTML=`<div class="saved-top"><div><div class="saved-name">${esc(d.name||'無名')}</div><div class="saved-meta">${esc(d.type||'種別未設定')} / 悪意 ${d.malice??0} / 行動値 ${d.initiative??0} / ${esc(d.placement||'配置未設定')}<br>パーツ ${(d.parts||[]).length}個 / マニューバ ${(d.maneuvers||[]).length}個</div></div><div class="toolbar"><button class="mini load">開く</button><button class="secondary mini dup">複製</button><button class="danger mini del">削除</button></div></div>`;
-    card.querySelector('.load').onclick=()=>writeForm(d);
-    card.querySelector('.dup').onclick=()=>{const copy=JSON.parse(JSON.stringify(d));copy.id=uid();copy.name=(copy.name||'')+'（コピー）';copy.updatedAt=new Date().toISOString();const arr=loadAll();arr.unshift(copy);saveAll(arr);renderSaved();setStatus('複製しました。');};
-    card.querySelector('.del').onclick=()=>{if(confirm(`「${d.name}」を削除しますか？`)){saveAll(loadAll().filter(x=>x.id!==d.id));if(editingId===d.id)newForm();renderSaved();}};
-    root.appendChild(card);
-  });
-}
+    const memo=[];
+    if(name) memo.push('キャラクター名：'+name);
+    if(age) memo.push('享年：'+age);
+    if(position) memo.push('ポジション：'+position);
+    if(cls) memo.push('クラス：'+cls);
+    if(placement) memo.push('初期配置：'+placement);
+    if(initiative) memo.push('行動値：'+initiative);
 
-function tokenJson(){const d=readForm();return JSON.stringify(d,null,2)}
-async function copyText(text,ok){
-  try{await navigator.clipboard.writeText(text);setStatus(ok)}catch{
-    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();setStatus(ok+'（互換モード）');
+    const counts={頭:0,腕:0,胴:0,脚:0};
+    const commands=['nm 【未練決定】','1nc 【対話判定】','1nc 【狂気判定】','1nc 【行動判定】'];
+    for(const x of maneuvers){
+      const p=x.part==='足'?'脚':x.part;
+      if(Object.prototype.hasOwnProperty.call(counts,p)) counts[p]++;
+      const where=x.part ? x.part+' / ' : '';
+      commands.push(('1na 【'+x.name+'】 '+where+(x.timing||'-')+' / '+(x.cost||'-')+' / '+(x.range||'-')+' '+(x.effect||'')).trim());
+    }
+    const partStatus=['頭','腕','胴','脚'].map(p=>({label:p,value:counts[p],max:counts[p]}));
+    const json={kind:'character',data:{name:name||'名称未取得',memo:memo.join('\n'),initiative:initiative,externalUrl:'',status:partStatus.concat(regrets),params:[],color:'#888888',commands:commands.join('\n')}};
+    $('output').value=JSON.stringify(json,null,2);
+    const misses=[];
+    if(!name) misses.push('キャラクター名');
+    if(!initiative) misses.push('行動値');
+    if(!maneuvers.length) misses.push('マニューバ');
+    $('message').textContent=misses.length ? '変換は実行されましたが、'+misses.join('・')+'を読み取れませんでした。' : '変換成功：'+name+' / 行動値 '+initiative+' / マニューバ '+maneuvers.length+'件 / 未練 '+regrets.length+'件';
+  }catch(err){
+    $('message').textContent='変換中にエラーが発生しました：'+err.message;
   }
 }
-function downloadJson(){
-  const d=readForm();
-  const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(d.name||'nechronica_token')+'.json';a.click();URL.revokeObjectURL(a.href);setStatus('JSONファイルを作成しました。');
+async function copyOutput(){
+  const text=$('output').value;
+  if(!text){$('message').textContent='先に変換してください。';return;}
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+    }else{
+      $('output').focus(); $('output').select();
+      if(!document.execCommand('copy')) throw new Error('ブラウザがコピーを許可しませんでした');
+      window.getSelection && window.getSelection().removeAllRanges();
+    }
+    $('message').textContent='JSONをコピーしました。';
+  }catch(err){
+    $('output').focus(); $('output').select();
+    $('message').textContent='自動コピーできません。出力欄を選択したので、手動でコピーしてください。';
+  }
 }
-function importJson(file){
-  const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result);writeForm(d);setStatus('JSONを読み込みました。必要なら「この手駒を保存」を押してください。');}catch(e){setStatus('JSONを読み込めませんでした。')}};
-  r.readAsText(file);
-}
-
-function ccfoliaJson(){
-  const d=readForm();
-  const partLines=(d.parts||[]).map(p=>{
-    const loc=p.location?`[${p.location}] `:'';
-    const kind=p.type?`（${p.type}）`:'';
-    const note=p.memo?`：${p.memo}`:'';
-    return `${loc}${p.name||'無名パーツ'}${kind}${note}`;
-  });
-  const memo=[
-    d.type?`種別：${d.type}`:'',
-    `悪意：${d.malice}`,
-    d.placement?`初期配置：${d.placement}`:'',
-    d.hp?`耐久・補足：${d.hp}`:'',
-    d.tags?`タグ：${d.tags}`:'',
-    partLines.length?`\n【パーツ】\n${partLines.join('\n')}`:'',
-    d.memo?`\n${d.memo}`:''
-  ].filter(Boolean).join('\n');
-
-  const commands=(d.maneuvers||[]).map(m=>{
-    const part=m.part?` ${m.part} /`:'';
-    return `1na 【${m.name||'マニューバ'}】${part} ${m.timing||'-'} / ${m.cost||'-'} / ${m.range||'-'} ${m.effect||''}`.replace(/\s+/g,' ').trim();
-  }).join('\n');
-
-  // パーツごとに1/1のステータスを作る。ココフォリア上で損傷管理に使える。
-  const status=(d.parts||[]).filter(p=>p.name).map(p=>({
-    label:`${p.location?`${p.location}:`:''}${p.name}`,
-    value:1,
-    max:1
-  }));
-
-  const obj={kind:'character',data:{name:d.name||'手駒',initiative:d.initiative||0,memo,commands,status}};
-  return JSON.stringify(obj,null,2);
-}
-
-$('addPartBtn').onclick=()=>addPart();
-$('addManeuverBtn').onclick=()=>addManeuver();
-$('newBtn').onclick=newForm;
-$('saveBtn').onclick=saveCurrent;
-$('copyBtn').onclick=()=>copyText(tokenJson(),'手駒JSONをコピーしました。');
-$('downloadBtn').onclick=downloadJson;
-$('importBtn').onclick=()=>$('fileInput').click();
-$('fileInput').onchange=(e)=>{const f=e.target.files?.[0];if(f)importJson(f);e.target.value='';};
-$('ccfoliaBtn').onclick=()=>copyText(ccfoliaJson(),'ココフォリア用JSONをコピーしました。');
-$('clearAllBtn').onclick=()=>{if(confirm('保存済みの手駒をすべて削除しますか？')){saveAll([]);newForm();renderSaved();setStatus('保存済み手駒をすべて削除しました。')}};
-
-addPart(); addManeuver(); renderSaved();
+const sample=`キャラクター名：ナグモ\n享年：8歳\nポジション：アリス\nクラス：　タナトス / バロック\n初期配置：煉獄\n行動値：13\n\n[未練]　　　　　　 内容　　　 狂気度　　発狂時\n〈狼のぬいぐるみ〉 への 保護　■■■□　常時密着\nヒイラギ　　　　　 への 恋心　■■■□　自傷行動\n\n■マニューバ■\n[部位]　　　　　マニューバ名　: タイミング : コスト : 射程: 効果\n[頭]　　　　　 のうみそ　　　 : オート　　 :　　　　:　　 : 2\n[頭]　　　　　 あご　　　　　 : アクション : 2　　　: 0　 : 肉弾攻撃１\n[脚]　　　　　 仕込みブーツ　 : アクション : 2　　　: 0　 : 白兵攻撃2、出目+1`;
+$('convertBtn').addEventListener('click',convert);
+$('copyBtn').addEventListener('click',copyOutput);
+$('sampleBtn').addEventListener('click',function(){$('input').value=sample;convert();});
+})();
 </script>
 </body>
 </html>

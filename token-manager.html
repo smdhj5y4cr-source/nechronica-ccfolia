@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ネクロニカ 手駒管理ツール</title>
+<style>
+:root{
+  --bg:#0d0d0f;--panel:#17171b;--panel2:#202027;--line:#34343e;
+  --text:#f0ecec;--muted:#aaa3a3;--accent:#a51d24;--accent2:#6d1015;
+  --part:#5f3b3d;--skill:#33485c;--other:#4a4357;--support:#20252d;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;background:linear-gradient(180deg,#09090b 0%,#131317 100%);color:var(--text)}
+header{position:sticky;top:0;z-index:10;background:rgba(13,13,15,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:16px}
+header h1{margin:0;font-size:22px;letter-spacing:.05em;color:#e6b5b7}
+header p{margin:6px 0 0;color:var(--muted);font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+.panel h2{margin:0 0 14px;font-size:18px;color:#d99699}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+input,textarea,select{width:100%;border:1px solid var(--line);border-radius:10px;background:#0f0f12;color:var(--text);padding:10px;font-size:15px}
+textarea{min-height:86px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#8d3a3f;box-shadow:0 0 0 2px rgba(165,29,36,.14)}
+button{border:0;border-radius:999px;padding:10px 16px;font-weight:700;font-size:14px;color:#fff;background:linear-gradient(180deg,var(--accent),var(--accent2));cursor:pointer}
+button.secondary{background:#3a3a43}button.good{background:#3f704d}button.warn{background:#8b5d20}button.danger{background:#7f2020}button.blue{background:#3e556b}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.help{background:#111116;border:1px solid #454550;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.75;color:#d7d1d1}
+.help strong{color:#f2c9cb}
+.savant-box{background:var(--support);border:1px solid #48505c;border-radius:12px;padding:14px;margin-bottom:14px}
+.savant-box h3{font-size:16px;margin:0 0 8px;color:#d4dce7}
+.savant-box p{font-size:12px;color:#b5bdc8;line-height:1.7;margin:0 0 10px}
+.entry-row{border:1px solid var(--line);border-radius:12px;background:#121216;margin-bottom:10px;overflow:hidden}
+.entry-head{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:9px 10px;border-bottom:1px solid var(--line)}
+.entry-badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800}
+.entry-badge.part{background:var(--part)}.entry-badge.skill{background:var(--skill)}.entry-badge.other{background:var(--other)}
+.entry-body{display:grid;grid-template-columns:.9fr .9fr 1.3fr .9fr .55fr .55fr;gap:8px;padding:10px}
+.entry-body .effect{grid-column:1/-1}
+.entry-row textarea{min-height:56px}
+.saved-list{display:grid;gap:10px}.saved-card{border:1px solid var(--line);border-radius:12px;padding:12px;background:#121216}
+.saved-top{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.saved-name{font-weight:800;font-size:17px}.saved-meta{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.6}
+.mini{font-size:12px;padding:7px 11px}.notice,.subnote{font-size:12px;color:var(--muted);line-height:1.7}.status{margin-top:8px;min-height:20px;font-size:13px;color:#d7c0c0}.empty{text-align:center;color:var(--muted);padding:20px 0}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.nav a{display:inline-block;text-decoration:none;border-radius:999px;padding:8px 13px;background:#3a3a43;color:#fff;font-weight:700;font-size:13px}
+.hidden{display:none!important}
+details{border:1px solid var(--line);border-radius:10px;background:#111116;padding:10px 12px;margin-top:10px}
+summary{cursor:pointer;font-weight:700;color:#ddd}
+.counter{font-size:12px;color:var(--muted);margin:8px 0 0}
+@media(max-width:800px){
+  .grid,.grid-3,.grid-4{grid-template-columns:1fr}
+  .entry-body{grid-template-columns:1fr 1fr}
+  .entry-body .effect{grid-column:1/-1}
+  .saved-top{display:block}.saved-top .toolbar{margin-top:10px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Nechronica 手駒管理</h1>
+  <p>サヴァント・ホラー・レギオンの手駒を作成・保存</p>
+  <div class="nav"><a href="index.html">キャラシ→ココフォリア変換へ戻る</a></div>
+</header>
+<main>
+  <section class="panel">
+    <div class="section-title"><h2>サヴァント作成支援</h2></div>
+    <div class="savant-box">
+      <h3>基本パーツを手入力しなくて大丈夫です</h3>
+      <p>「新規サヴァント」を押すと、初期配置「煉獄」・行動値9と、基本パーツ12個をまとめて入れます。「基本パーツを補充」は、現在の手駒を残したまま足りない基本パーツだけ追加します。</p>
+      <div class="toolbar">
+        <button id="newSavantBtn" type="button">新規サヴァント</button>
+        <button id="addBasicsBtn" type="button" class="blue">基本パーツを補充</button>
+        <button id="copySheetBtn" type="button" class="secondary">キャラシ形式をコピー</button>
+      </div>
+      <div class="counter" id="basicStatus">基本パーツ：0 / 12</div>
+      <details>
+        <summary>キャラクター保管所のテキストを貼って読み込む</summary>
+        <p class="subnote">全文でも「■マニューバ■」部分だけでも読み込めます。読み込んだマニューバ一覧で現在の一覧を置き換えます。</p>
+        <textarea id="sheetInput" placeholder="ここにキャラシのテキストを貼り付け"></textarea>
+        <div class="toolbar" style="margin-top:10px">
+          <button id="parseSheetBtn" type="button" class="blue">貼り付け内容を読み込む</button>
+          <button id="clearSheetBtn" type="button" class="secondary">貼り付け欄を空にする</button>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-title"><h2>手駒データ</h2><button class="secondary mini" id="newBtn">新規作成</button></div>
+    <div class="grid">
+      <div><label>タイトル</label><input id="title" placeholder="例：墓守の少女"></div>
+      <div><label>キャラクター名 / 手駒名</label><input id="name" placeholder="例：エリーゼ"></div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div><label>種別</label><input id="type" list="typeOptions" placeholder="例：サヴァント"><datalist id="typeOptions"><option value="サヴァント"><option value="ホラー"><option value="レギオン"><option value="その他"></datalist></div>
+      <div><label>種族</label><input id="race" placeholder="任意"></div>
+    </div>
+    <div class="grid-4" style="margin-top:12px">
+      <div><label>享年</label><input id="age" placeholder="例：15歳"></div>
+      <div><label>ポジション</label><input id="position" placeholder="任意"></div>
+      <div><label>メインクラス</label><input id="mainClass" placeholder="任意"></div>
+      <div><label>サブクラス</label><input id="subClass" placeholder="任意"></div>
+    </div>
+    <div class="grid-3" style="margin-top:12px">
+      <div><label>悪意</label><input id="malice" type="number" inputmode="numeric" min="0" value="0"></div>
+      <div><label>最大行動値</label><input id="initiative" type="number" inputmode="numeric" min="0" value="0"></div>
+      <div><label>初期配置</label><select id="placement"><option value="">未設定</option><option>奈落</option><option>地獄</option><option>煉獄</option><option>花園</option><option>楽園</option></select></div>
+    </div>
+    <details>
+      <summary>外見などの補助情報</summary>
+      <div class="grid-3" style="margin-top:12px">
+        <div><label>髪の色</label><input id="hairColor"></div>
+        <div><label>瞳の色</label><input id="eyeColor"></div>
+        <div><label>肌の色</label><input id="skinColor"></div>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div><label>身長</label><input id="height"></div>
+        <div><label>体重</label><input id="weight"></div>
+      </div>
+      <div style="margin-top:12px"><label>暗示</label><input id="hint"></div>
+      <div style="margin-top:12px"><label>記憶のカケラ</label><textarea id="fragments" placeholder="名称と内容など"></textarea></div>
+    </details>
+    <div class="grid" style="margin-top:12px">
+      <div><label>耐久・補足</label><input id="hp" placeholder="例：特殊耐久など"></div>
+      <div><label>タグ・分類</label><input id="tags" placeholder="例：近接, ボス"></div>
+    </div>
+    <div style="margin-top:12px"><label>説明・メモ</label><textarea id="memo" placeholder="設定、見た目、運用メモなど"></textarea></div>
+  </section>
+
+  <section class="panel">
+    <div class="section-title"><h2>マニューバ／パーツ</h2><button class="secondary mini" id="addEntryBtn">＋ 追加</button></div>
+    <div class="help">
+      <strong>パーツ</strong>は「あご」「うで」「しっぽ」など、損傷する身体・装備です。<br>
+      <strong>スキル</strong>は「死神」のように、パーツとして損傷しない能力です。<br>
+      サヴァントなら、まず上の<strong>「新規サヴァント」</strong>を押して基本パーツを出し、その下へ強化パーツやスキルを追加すると楽です。
+    </div>
+    <div id="entryList"></div>
+  </section>
+
+  <section class="panel">
+    <h2>保存・出力</h2>
+    <div class="toolbar">
+      <button id="saveBtn">この手駒を保存</button>
+      <button class="good" id="copyBtn">JSONをコピー</button>
+      <button class="secondary" id="downloadBtn">JSONファイル保存</button>
+      <button class="secondary" id="importBtn">JSON読み込み</button>
+      <button class="warn" id="ccfoliaBtn">ココフォリア用JSONをコピー</button>
+      <input id="fileInput" type="file" accept="application/json,.json" hidden>
+    </div>
+    <div class="status" id="status"></div>
+    <p class="notice">ココフォリア出力では、基本パーツは「頭・腕・胴・脚」の4本にまとめ、追加した強化パーツ・たからもの等だけを個別の1/1ステータスとして出力します。保存データはこのブラウザ内に保持されます。以前の版で保存した手駒も読み込めるようにしています。Safariのサイトデータを削除すると消える場合があるため、大事な手駒はJSONファイル保存も併用してください。</p>
+  </section>
+
+  <section class="panel">
+    <div class="section-title"><h2>保存済み手駒</h2><button class="danger mini" id="clearAllBtn">全削除</button></div>
+    <div id="savedList" class="saved-list"></div>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const STORAGE_KEY='nechronica_token_manager_v1';
+let editingId=null;
+const BASIC_PARTS=[
+  {kind:'part',location:'頭',name:'のうみそ',partClass:'基本',timing:'オート',cost:'',range:'',effect:'2'},
+  {kind:'part',location:'頭',name:'めだま',partClass:'基本',timing:'オート',cost:'',range:'',effect:'1'},
+  {kind:'part',location:'頭',name:'あご',partClass:'基本',timing:'アクション',cost:'2',range:'0',effect:'肉弾攻撃１'},
+  {kind:'part',location:'腕',name:'こぶし',partClass:'基本',timing:'アクション',cost:'2',range:'0',effect:'肉弾攻撃１'},
+  {kind:'part',location:'腕',name:'うで',partClass:'基本',timing:'ジャッジ',cost:'1',range:'0',effect:'支援１'},
+  {kind:'part',location:'腕',name:'かた',partClass:'基本',timing:'アクション',cost:'4',range:'自身',effect:'移動１'},
+  {kind:'part',location:'胴',name:'せぼね',partClass:'基本',timing:'アクション',cost:'1',range:'自身',effect:'次カウントで使うマニューバ１つのコスト-1'},
+  {kind:'part',location:'胴',name:'はらわた',partClass:'基本',timing:'オート',cost:'',range:'',effect:''},
+  {kind:'part',location:'胴',name:'はらわた',partClass:'基本',timing:'オート',cost:'',range:'',effect:''},
+  {kind:'part',location:'脚',name:'ほね',partClass:'基本',timing:'アクション',cost:'3',range:'自身',effect:'移動１'},
+  {kind:'part',location:'脚',name:'ほね',partClass:'基本',timing:'アクション',cost:'3',range:'自身',effect:'移動１'},
+  {kind:'part',location:'脚',name:'あし',partClass:'基本',timing:'ジャッジ',cost:'1',range:'0',effect:'妨害１'}
+];
+function uid(){return 't_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8)}
+function esc(s=''){return String(s).replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':'&quot;'}[c]))}
+function setStatus(msg){$('status').textContent=msg}
+function kindLabel(k){return k==='part'?'パーツ':k==='skill'?'スキル':'その他'}
+function kindClass(k){return k==='part'?'part':k==='skill'?'skill':'other'}
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function normalizeText(s){return String(s||'').replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ').replace(/[\u200B-\u200D\uFEFF]/g,'')}
+function getField(text,label){const m=text.match(new RegExp('(?:^|\\n)\\s*'+label+'\\s*[：:]\\s*([^\\n]*)','m'));return m?m[1].trim():''}
+function numFrom(v){const m=String(v||'').replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).match(/-?\d+/);return m?Number(m[0]):0}
+function basicKey(e){return `${e.location}|${e.name}`}
+function currentBasicCount(){
+  const have={};
+  [...document.querySelectorAll('.entry-row')].forEach(r=>{
+    if(r.querySelector('.e-kind').value!=='part')return;
+    const key=`${r.querySelector('.e-location').value}|${r.querySelector('.e-name').value.trim()}`;
+    have[key]=(have[key]||0)+1;
+  });
+  const need={};BASIC_PARTS.forEach(e=>need[basicKey(e)]=(need[basicKey(e)]||0)+1);
+  let count=0;Object.keys(need).forEach(k=>count+=Math.min(need[k],have[k]||0));return count;
+}
+function updateBasicStatus(){$('basicStatus').textContent=`基本パーツ：${currentBasicCount()} / ${BASIC_PARTS.length}`}
+function addEntry(data={}){
+  const row=document.createElement('div');row.className='entry-row';
+  const kind=data.kind||'part';
+  row.innerHTML=`
+    <div class="entry-head">
+      <span class="entry-badge ${kindClass(kind)}">${kindLabel(kind)}</span>
+      <button class="danger mini remove" type="button">削除</button>
+    </div>
+    <div class="entry-body">
+      <div><label>種類</label><select class="e-kind"><option value="part">パーツ</option><option value="skill">スキル</option><option value="other">その他</option></select></div>
+      <div class="location-wrap"><label>部位</label><select class="e-location"><option value="">未設定</option><option>頭</option><option>腕</option><option>胴</option><option>脚</option><option>その他</option></select></div>
+      <div><label>名前</label><input class="e-name" value="${esc(data.name||'')}" placeholder="例：あご / 死神"></div>
+      <div><label>タイミング</label><input class="e-timing" value="${esc(data.timing||'')}" placeholder="例：アクション / オート"></div>
+      <div><label>コスト</label><input class="e-cost" value="${esc(data.cost||'')}" placeholder="2"></div>
+      <div><label>射程</label><input class="e-range" value="${esc(data.range||'')}" placeholder="0"></div>
+      <div class="part-class-wrap"><label>パーツ分類</label><select class="e-partclass"><option value="">未設定</option><option>基本</option><option>武装</option><option>変異</option><option>改造</option><option>たからもの</option><option>その他</option></select></div>
+      <div class="effect"><label>効果・説明</label><textarea class="e-effect" placeholder="例：肉弾攻撃1 / 白兵攻撃の出目+1">${esc(data.effect||data.memo||'')}</textarea></div>
+    </div>`;
+  row.querySelector('.e-kind').value=kind;
+  row.querySelector('.e-location').value=data.location||data.partLocation||'';
+  row.querySelector('.e-partclass').value=data.partClass||data.type||'';
+  const refresh=()=>{
+    const k=row.querySelector('.e-kind').value;
+    const badge=row.querySelector('.entry-badge');badge.textContent=kindLabel(k);badge.className='entry-badge '+kindClass(k);
+    row.querySelector('.location-wrap').classList.toggle('hidden',k!=='part');
+    row.querySelector('.part-class-wrap').classList.toggle('hidden',k!=='part');
+    updateBasicStatus();
+  };
+  row.querySelector('.e-kind').addEventListener('change',refresh);
+  row.querySelector('.e-location').addEventListener('change',updateBasicStatus);
+  row.querySelector('.e-name').addEventListener('input',updateBasicStatus);
+  row.querySelector('.remove').addEventListener('click',()=>{row.remove();updateBasicStatus()});
+  $('entryList').appendChild(row);refresh();
+}
+function normalizeOld(d){
+  if(Array.isArray(d.entries)) return d;
+  const entries=[];
+  (d.parts||[]).forEach(p=>entries.push({kind:'part',location:p.location||p.part||'',name:p.name||'',partClass:p.type||'',timing:p.timing||'',cost:p.cost||'',range:p.range||'',effect:p.memo||p.effect||''}));
+  (d.maneuvers||[]).forEach(m=>entries.push({kind:m.kind||'skill',location:'',name:m.name||'',timing:m.timing||'',cost:m.cost||'',range:m.range||'',effect:m.effect||''}));
+  return {...d,entries};
+}
+function readForm(){
+  const entries=[...document.querySelectorAll('.entry-row')].map(r=>({
+    kind:r.querySelector('.e-kind').value,
+    location:r.querySelector('.e-kind').value==='part'?r.querySelector('.e-location').value:'',
+    name:r.querySelector('.e-name').value.trim(),
+    partClass:r.querySelector('.e-kind').value==='part'?r.querySelector('.e-partclass').value:'',
+    timing:r.querySelector('.e-timing').value.trim(),cost:r.querySelector('.e-cost').value.trim(),range:r.querySelector('.e-range').value.trim(),effect:r.querySelector('.e-effect').value.trim()
+  })).filter(e=>e.name||e.effect||e.timing||e.cost||e.range||e.location||e.partClass);
+  const parts=entries.filter(e=>e.kind==='part').map(e=>({location:e.location,name:e.name,type:e.partClass,memo:e.effect,timing:e.timing,cost:e.cost,range:e.range}));
+  const maneuvers=entries.map(e=>({part:e.kind==='part'?e.name:'',name:e.name,timing:e.timing,cost:e.cost,range:e.range,effect:e.effect,kind:e.kind}));
+  return {
+    id:editingId||uid(),title:$('title').value.trim(),name:$('name').value.trim(),type:$('type').value,
+    race:$('race').value.trim(),age:$('age').value.trim(),position:$('position').value.trim(),mainClass:$('mainClass').value.trim(),subClass:$('subClass').value.trim(),
+    hairColor:$('hairColor').value.trim(),eyeColor:$('eyeColor').value.trim(),skinColor:$('skinColor').value.trim(),height:$('height').value.trim(),weight:$('weight').value.trim(),hint:$('hint').value.trim(),fragments:$('fragments').value.trim(),
+    malice:Number($('malice').value)||0,initiative:Number($('initiative').value)||0,placement:$('placement').value,hp:$('hp').value.trim(),tags:$('tags').value.trim(),memo:$('memo').value.trim(),
+    entries,parts,maneuvers,updatedAt:new Date().toISOString()
+  };
+}
+function writeForm(raw){
+  const d=normalizeOld(raw||{});editingId=d.id||null;
+  const textFields=['title','name','race','age','position','mainClass','subClass','hairColor','eyeColor','skinColor','height','weight','hint','fragments','hp','tags','memo'];
+  textFields.forEach(id=>$(id).value=d[id]||'');
+  $('type').value=d.type||'';$('malice').value=d.malice??0;$('initiative').value=d.initiative??0;$('placement').value=d.placement||'';
+  $('entryList').innerHTML='';(d.entries||[]).forEach(addEntry);if(!(d.entries||[]).length)addEntry();updateBasicStatus();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function clearFormFields(){
+  ['title','name','race','age','position','mainClass','subClass','hairColor','eyeColor','skinColor','height','weight','hint','fragments','hp','tags','memo'].forEach(id=>$(id).value='');
+  $('type').value='';$('malice').value=0;$('initiative').value=0;$('placement').value='';$('entryList').innerHTML='';
+}
+function newForm(){editingId=null;clearFormFields();addEntry();updateBasicStatus();setStatus('新規作成モードです。')}
+function addMissingBasics(){
+  const existing={};
+  [...document.querySelectorAll('.entry-row')].forEach(r=>{
+    if(r.querySelector('.e-kind').value!=='part')return;
+    const key=`${r.querySelector('.e-location').value}|${r.querySelector('.e-name').value.trim()}`;existing[key]=(existing[key]||0)+1;
+  });
+  const used={};let added=0;
+  BASIC_PARTS.forEach(p=>{
+    const key=basicKey(p);used[key]=(used[key]||0)+1;
+    if((existing[key]||0)<used[key]){addEntry(clone(p));added++;}
+  });
+  updateBasicStatus();setStatus(added?`足りない基本パーツを${added}個追加しました。`:'基本パーツはすでに12個そろっています。');
+}
+function newSavant(){
+  if((readForm().name||document.querySelectorAll('.entry-row').length>1) && !confirm('現在の入力を消して、新しいサヴァントを作りますか？'))return;
+  editingId=null;clearFormFields();$('type').value='サヴァント';$('initiative').value=9;$('placement').value='煉獄';BASIC_PARTS.forEach(p=>addEntry(clone(p)));updateBasicStatus();setStatus('サヴァントの基本セットを作成しました。名前や追加パーツ、スキルを入力してください。');
+}
+function parseSheetManeuvers(text){
+  const items=[];
+  for(const raw of normalizeText(text).split('\n')){
+    const line=raw.trim();if(!line.startsWith('['))continue;
+    const m=line.match(/^\[([^\]]*)\]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*?)\s*[：:]\s*(.*)$/);
+    if(!m)continue;
+    const bracket=m[1].trim(),name=m[2].trim();if(!name||bracket==='部位'||/マニューバ名/.test(name))continue;
+    const isPart=['頭','腕','胴','脚','足'].includes(bracket);const location=bracket==='足'?'脚':(isPart?bracket:'');
+    const baseMatch=BASIC_PARTS.some(p=>p.location===location&&p.name===name);
+    items.push({kind:isPart?'part':'skill',location,name,partClass:isPart&&baseMatch?'基本':'',timing:m[3].trim(),cost:m[4].trim(),range:m[5].trim(),effect:m[6].trim()});
+  }
+  return items;
+}
+function parseSheet(){
+  const text=normalizeText($('sheetInput').value);if(!text.trim()){setStatus('先にキャラシのテキストを貼り付けてください。');return;}
+  const name=getField(text,'キャラクター名');const title=getField(text,'タイトル');const race=getField(text,'種族');const age=getField(text,'享年');const position=getField(text,'ポジション');
+  const placement=getField(text,'初期配置');const action=numFrom(getField(text,'行動値'));
+  const cls=getField(text,'クラス');let mainClass='',subClass='';if(cls){const parts=cls.split('/');mainClass=(parts[0]||'').trim();subClass=(parts[1]||'').trim();}
+  if(name)$('name').value=name;if(title)$('title').value=title;if(race)$('race').value=race;if(age)$('age').value=age;if(position)$('position').value=position;if(mainClass)$('mainClass').value=mainClass;if(subClass)$('subClass').value=subClass;if(placement)$('placement').value=placement;if(action)$('initiative').value=action;$('type').value='サヴァント';
+  const items=parseSheetManeuvers(text);
+  if(items.length){$('entryList').innerHTML='';items.forEach(addEntry);}updateBasicStatus();
+  setStatus(items.length?`キャラシを読み込みました。マニューバ／パーツ ${items.length}件。`:'基本情報は読み込みましたが、マニューバ行を見つけられませんでした。');
+}
+function sheetText(){
+  const d=readForm();
+  const lines=(d.entries||[]).map(e=>{
+    const bracket=e.kind==='part'?(e.location||'部位'):(e.kind==='skill'?'スキル':'その他');
+    return `[${bracket}]　${e.name||''} : ${e.timing||''} : ${e.cost||''} : ${e.range||''}: ${e.effect||''}`;
+  });
+  return `タイトル：${d.title||''}\nキャラクター名：${d.name||''}\n\n種族：${d.race||''}\n享年：${d.age||''}\n髪の色：${d.hairColor||''}　　 / 瞳の色：${d.eyeColor||''}　　 / 肌の色：${d.skinColor||''}\n身長：${d.height||''}\n体重：${d.weight||''}\n\nポジション：${d.position||''}\nクラス：　${d.mainClass||''} / ${d.subClass||''}\n初期配置：${d.placement||'煉獄'}\n行動値：${d.initiative||0}\n\n■パーソナルデータ■\n\n暗示：${d.hint||''}\n[記憶のカケラ] 内容\n${d.fragments||''}\n\n\n[未練]　　 内容　　　 狂気度　　発狂時\nたからもの への 依存　■■■□　幼児退行(最大行動値減少(-2))\n　　　　　 への　　　 ■■■□　()\n　　　　　 への　　　 ■■■□　()\n　　　　　 への　　　 ■■■□　()\n　　　　　 への　　　 ■■■□　()\n　　　　　 への　　　 ■■■□　()\n\n\n■強化値■\n　　　　武装　変異　改造\nﾒｲﾝｸﾗｽ　　 0　　 0　　 0\nｻﾌﾞｸﾗｽ　　 0　　 0　　 0\nﾎﾞｰﾅｽ\n寵愛\n=合計=　　 0　　 0　　 0\n\n■マニューバ■\n\n[部位] マニューバ名: タイミング : コスト : 射程: 効果\n${lines.join('\n')}\n\n\n■その他■\n寵愛点：0点\n成長履歴：\nNo. 獲得寵愛点(達成/ﾎﾞｰﾅｽ/ﾋﾟﾝｿﾞﾛ)　メモ\n0　　　　　0点(　　 /　　)\n1　　　　　0点(　　 /　　)\n2　　　　　0点(　　 /　　)\n\n\nメモ：${d.memo||''}`;
+}
+function loadAll(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return []}}
+function saveAll(arr){localStorage.setItem(STORAGE_KEY,JSON.stringify(arr))}
+function saveCurrent(){const d=readForm();if(!d.name){setStatus('キャラクター名 / 手駒名を入力してください。');return}const all=loadAll();const idx=all.findIndex(x=>x.id===d.id);if(idx>=0)all[idx]=d;else all.unshift(d);saveAll(all);editingId=d.id;renderSaved();setStatus(`「${d.name}」を保存しました。`)}
+function renderSaved(){const all=loadAll();const root=$('savedList');root.innerHTML='';if(!all.length){root.innerHTML='<div class="empty">まだ保存された手駒はありません。</div>';return}all.forEach(raw=>{const d=normalizeOld(raw);const pc=(d.entries||[]).filter(e=>e.kind==='part').length;const sc=(d.entries||[]).filter(e=>e.kind!=='part').length;const card=document.createElement('div');card.className='saved-card';card.innerHTML=`<div class="saved-top"><div><div class="saved-name">${esc(d.name||'無名')}</div><div class="saved-meta">${esc(d.type||'種別未設定')} / 悪意 ${d.malice??0} / 行動値 ${d.initiative??0} / ${esc(d.placement||'配置未設定')}<br>パーツ ${pc}個 / スキル等 ${sc}個</div></div><div class="toolbar"><button class="mini load">開く</button><button class="secondary mini dup">複製</button><button class="danger mini del">削除</button></div></div>`;card.querySelector('.load').onclick=()=>writeForm(d);card.querySelector('.dup').onclick=()=>{const copy=clone(d);copy.id=uid();copy.name=(copy.name||'')+'（コピー）';copy.updatedAt=new Date().toISOString();const arr=loadAll();arr.unshift(copy);saveAll(arr);renderSaved();setStatus('複製しました。')};card.querySelector('.del').onclick=()=>{if(confirm(`「${d.name}」を削除しますか？`)){saveAll(loadAll().filter(x=>x.id!==d.id));if(editingId===d.id)newForm();renderSaved()}};root.appendChild(card)})}
+function tokenJson(){return JSON.stringify(readForm(),null,2)}
+async function copyText(text,ok){try{await navigator.clipboard.writeText(text);setStatus(ok)}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();setStatus(ok+'（互換モード）')}}
+function downloadJson(){const d=readForm();const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(d.name||'nechronica_token')+'.json';a.click();URL.revokeObjectURL(a.href);setStatus('JSONファイルを作成しました。')}
+function importJson(file){const r=new FileReader();r.onload=()=>{try{writeForm(JSON.parse(r.result));setStatus('JSONを読み込みました。必要なら「この手駒を保存」を押してください。')}catch(e){setStatus('JSONを読み込めませんでした。')}};r.readAsText(file)}
+function ccfoliaJson(){
+  const d=readForm();
+  const parts=d.entries.filter(e=>e.kind==='part');
+
+  const partLines=parts.map(p=>`${p.location?`[${p.location}] `:''}${p.name||'無名パーツ'}${p.partClass?`（${p.partClass}）`:''}${p.effect?`：${p.effect}`:''}`);
+  const memo=[
+    d.title?`タイトル：${d.title}`:'',
+    d.type?`種別：${d.type}`:'',
+    d.race?`種族：${d.race}`:'',
+    d.age?`享年：${d.age}`:'',
+    d.position?`ポジション：${d.position}`:'',
+    (d.mainClass||d.subClass)?`クラス：${d.mainClass||''} / ${d.subClass||''}`:'',
+    `悪意：${d.malice}`,
+    d.placement?`初期配置：${d.placement}`:'',
+    d.hp?`耐久・補足：${d.hp}`:'',
+    d.tags?`タグ：${d.tags}`:'',
+    partLines.length?`\n【パーツ】\n${partLines.join('\n')}`:'',
+    d.memo?`\n${d.memo}`:''
+  ].filter(Boolean).join('\n');
+
+  const commands=d.entries.map(e=>
+    `1na 【${e.name||'マニューバ'}】 ${e.kind==='part'&&e.location?`[${e.location}] `:''}${e.timing||'-'} / ${e.cost||'-'} / ${e.range||'-'} ${e.effect||''}`
+      .replace(/\s+/g,' ').trim()
+  ).join('\n');
+
+  // 基本パーツは「頭・腕・胴・脚」の4本にまとめる。
+  // 強化パーツ・たからもの等は1パーツずつ個別ステータスにする。
+  const locations=['頭','腕','胴','脚'];
+  const basicCounts={頭:0,腕:0,胴:0,脚:0};
+  const extraParts=[];
+  parts.forEach(p=>{
+    if(p.partClass==='基本' && Object.prototype.hasOwnProperty.call(basicCounts,p.location)){
+      basicCounts[p.location]++;
+    }else{
+      extraParts.push(p);
+    }
+  });
+
+  const status=[];
+  locations.forEach(loc=>{
+    const n=basicCounts[loc];
+    if(n>0) status.push({label:loc,value:n,max:n});
+  });
+
+  const nameCounts={};
+  extraParts.forEach(p=>{
+    const k=`${p.location}:${p.name}`;
+    nameCounts[k]=(nameCounts[k]||0)+1;
+  });
+  const seen={};
+  extraParts.filter(p=>p.name).forEach(p=>{
+    const k=`${p.location}:${p.name}`;
+    seen[k]=(seen[k]||0)+1;
+    const suffix=nameCounts[k]>1?` ${seen[k]}`:'';
+    status.push({
+      label:`${p.location?`${p.location}:`:''}${p.name}${suffix}`,
+      value:1,
+      max:1
+    });
+  });
+
+  return JSON.stringify({kind:'character',data:{name:d.name||'手駒',initiative:d.initiative||0,memo,commands,status}},null,2);
+}
+$('addEntryBtn').onclick=()=>addEntry();
+$('newBtn').onclick=newForm;
+$('newSavantBtn').onclick=newSavant;
+$('addBasicsBtn').onclick=addMissingBasics;
+$('parseSheetBtn').onclick=parseSheet;
+$('clearSheetBtn').onclick=()=>{$('sheetInput').value='';setStatus('貼り付け欄を空にしました。')};
+$('copySheetBtn').onclick=()=>copyText(sheetText(),'キャラシ形式をコピーしました。');
+$('saveBtn').onclick=saveCurrent;
+$('copyBtn').onclick=()=>copyText(tokenJson(),'手駒JSONをコピーしました。');
+$('downloadBtn').onclick=downloadJson;
+$('importBtn').onclick=()=>$('fileInput').click();
+$('fileInput').onchange=e=>{const f=e.target.files?.[0];if(f)importJson(f);e.target.value=''};
+$('ccfoliaBtn').onclick=()=>copyText(ccfoliaJson(),'ココフォリア用JSONをコピーしました。');
+$('clearAllBtn').onclick=()=>{if(confirm('保存済みの手駒をすべて削除しますか？')){saveAll([]);newForm();renderSaved();setStatus('保存済み手駒をすべて削除しました。')}};
+addEntry();renderSaved();updateBasicStatus();
+</script>
+</body>
+</html>
